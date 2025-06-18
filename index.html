@@ -1,0 +1,66 @@
+const express = require("express");
+const fs = require("fs");
+const path = require("path");
+
+const app = express();
+app.use(express.json());
+app.use(express.static(__dirname)); 
+app.get("/", (req, res) => {
+  res.sendFile(__dirname + "/register.html");
+});
+// لتقديم ملفات HTML و CSS
+
+const USERS_FILE = path.join(__dirname, "users.json");
+
+// إنشاء الملف إن لم يكن موجود
+if (!fs.existsSync(USERS_FILE)) {
+  fs.writeFileSync(USERS_FILE, JSON.stringify([]));
+}
+// تقديم صفحة login.html
+app.get("/login.html", (req, res) => {
+  res.sendFile(__dirname + "/login.html");
+});
+
+// التحقق من تسجيل الدخول
+app.post("/login", (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.json({ message: "يرجى إدخال كل البيانات" });
+  }
+
+  const users = JSON.parse(fs.readFileSync("users.json"));
+  const user = users.find(u => u.email === email && u.password === password);
+
+  if (user) {
+    return res.json({ redirect: "https://www.tiktok.com" });
+  } else {
+    return res.json({ message: "بيانات غير صحيحة" });
+  }
+});
+// معالجة تسجيل الحساب
+app.post("/register", (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.json({ message: "يرجى إدخال كل البيانات" });
+  }
+
+  const users = JSON.parse(fs.readFileSync(USERS_FILE));
+  const userExists = users.find(user => user.email === email);
+
+  if (userExists) {
+    return res.json({ message: "هذا البريد مسجل بالفعل" });
+  }
+
+  users.push({ email, password });
+  fs.writeFileSync(USERS_FILE, JSON.stringify(users, null, 2));
+
+  res.json({ message: "تم التسجيل بنجاح" });
+});
+
+// تشغيل السيرفر
+const PORT = 3000;
+app.listen(PORT, () => {
+  console.log("السيرفر يعمل على http://localhost:" + PORT);
+});
